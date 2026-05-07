@@ -262,7 +262,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;
     <button class="nav-btn" onclick="showPage('calendario')">Calendario</button>
     <button class="nav-btn" onclick="showPage('sospesi')">Sospesi</button>
   </div>
-  <button class="nav-update" onclick="openBulkUpdate()">⟳ Aggiorna Capitoli</button>
+  <div style="display:flex;align-items:center;gap:.75rem;">
+    <button class="nav-update" onclick="openBulkUpdate()">⟳ Aggiorna Capitoli</button>
+    <div id="nav-user" style="display:none;align-items:center;gap:8px;">
+      <img id="nav-avatar" src="" alt="" style="width:28px;height:28px;border-radius:50%;border:1px solid rgba(29,158,117,0.5);object-fit:cover;flex-shrink:0;">
+      <span id="nav-email" style="font-size:11px;letter-spacing:1px;color:rgba(250,246,237,0.55);display:none;"></span>
+      <button onclick="doLogout()" style="background:none;border:1px solid rgba(216,90,48,0.35);color:rgba(216,90,48,0.7);font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#D85A30';this.style.color='#D85A30'" onmouseout="this.style.borderColor='rgba(216,90,48,0.35)';this.style.color='rgba(216,90,48,0.7)'">Esci</button>
+    </div>
+  </div>
 </nav>
 
 <div id="home" class="page active">
@@ -341,6 +348,7 @@ async function apiFetch(path, opts = {}) {
     ...opts,
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
+  if (r.status === 401) { window.location.href = BASE + '/login.html'; throw new Error('Unauthorized'); }
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   return r.json();
 }
@@ -904,10 +912,25 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+async function checkAuth() {
+  const user = await apiGet('/auth/me'); // throws on 401, redirecting to login
+  const navUser = document.getElementById('nav-user');
+  navUser.style.display = 'flex';
+  document.getElementById('nav-email').textContent = user.email;
+  if (window.innerWidth >= 600) document.getElementById('nav-email').style.display = 'block';
+  const avatar = document.getElementById('nav-avatar');
+  if (user.picture) avatar.src = user.picture;
+  else avatar.style.display = 'none';
+}
+
+function doLogout() { window.location.href = BASE + '/auth/logout'; }
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 initParticles();
-init();
+checkAuth().then(() => init());
 </script>
 </body>
 </html>

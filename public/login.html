@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manhwa Tracker — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --teal:#1D9E75; --teal2:#5DCAA5;
+  --amber:#BA7517; --amber2:#FAC775;
+  --deep:#1a2e3a; --deep2:#2a4a5e;
+  --cream:#faf6ed; --muted:#5a6e7a;
+  --coral:#D85A30;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Rajdhani',sans-serif;
+  background:var(--deep);
+  min-height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  background-image:radial-gradient(ellipse at 50% 0%, rgba(29,158,117,0.18) 0%, transparent 65%);
+}
+.card {
+  background:rgba(42,74,94,0.55);
+  border:1px solid rgba(29,158,117,0.3);
+  border-radius:18px;
+  padding:2.5rem 2rem;
+  width:100%; max-width:360px;
+  text-align:center;
+  backdrop-filter:blur(16px);
+  box-shadow:0 8px 48px rgba(0,0,0,0.4);
+}
+.logo {
+  font-family:'Cinzel',serif;
+  font-size:22px; font-weight:900;
+  color:var(--amber2); letter-spacing:4px;
+  text-transform:uppercase; margin-bottom:0.25rem;
+}
+.logo span { color:var(--cream); font-weight:400; }
+.tagline {
+  font-size:11px; letter-spacing:3px; text-transform:uppercase;
+  color:rgba(250,246,237,0.45); margin-bottom:2.25rem;
+}
+.google-btn {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  width:100%;
+  background:rgba(250,246,237,0.92);
+  border:none; border-radius:6px;
+  padding:11px 16px; cursor:pointer;
+  font-family:'Rajdhani',sans-serif;
+  font-size:14px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase;
+  color:#1a2e3a;
+  text-decoration:none;
+  transition:background .2s, transform .15s;
+}
+.google-btn:hover { background:#fff; transform:translateY(-1px); }
+.google-btn svg { width:20px; height:20px; flex-shrink:0; }
+.error {
+  margin-top:1.25rem; font-size:12px; letter-spacing:1px;
+  color:var(--coral); display:none;
+  padding:8px 12px;
+  background:rgba(216,90,48,0.1);
+  border:1px solid rgba(216,90,48,0.3);
+  border-radius:5px;
+}
+.error.show { display:block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">MANHWA<span>TRACKER</span></div>
+  <div class="tagline">Il tuo tracker personale</div>
+  <a class="google-btn" id="login-btn" href="#">
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
+    Accedi con Google
+  </a>
+  <div class="error" id="error-msg">Accesso negato — email non autorizzata.</div>
+</div>
+
+<script>
+  // Derive basePath from this page's URL (strip the filename)
+  const parts = window.location.pathname.split('/');
+  parts.pop(); // remove 'login.html'
+  const basePath = parts.join('/').replace(/\/$/, '');
+  document.getElementById('login-btn').href = basePath + '/auth/google';
+
+  if (new URLSearchParams(window.location.search).get('error')) {
+    document.getElementById('error-msg').classList.add('show');
+  }
+</script>
+</body>
+</html>
