@@ -45,6 +45,7 @@ app.get(indexPaths, requireAuth, (req, res) => {
 app.use(`${BASE_PATH}/api/manhwa`, requireAuth, require('./src/routes/manhwa'));
 app.use(`${BASE_PATH}/api/scrape`, requireAuth, require('./src/routes/scrape'));
 app.use(`${BASE_PATH}/api/covers`, requireAuth, require('./src/routes/covers'));
+app.use(`${BASE_PATH}/api/info`, requireAuth, require('./src/routes/info'));
 
 app.listen(PORT, () => {
   console.log(`Manhwa Tracker running at http://localhost:${PORT}${BASE_PATH}`);

@@ -254,6 +254,19 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;
 .skip-btn:disabled{opacity:.4;cursor:default;}
 .scrape-spinner{color:var(--teal2);animation:spin .8s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg);}}
+.debug-btn{background:transparent;border:1px solid rgba(29,158,117,.3);color:var(--teal);font-size:11px;padding:4px 7px;border-radius:3px;cursor:pointer;}
+.debug-btn:disabled{opacity:.35;cursor:default;}
+.modal.wide{max-width:900px;}
+.dbg-section{font-family:'Cinzel',serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);margin:1rem 0 .4rem;}
+.dbg-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:.5rem;}
+.dbg-table td,.dbg-table th{padding:4px 8px;border-bottom:1px solid rgba(29,158,117,.12);text-align:left;vertical-align:top;}
+.dbg-table td:first-child{color:var(--muted);white-space:nowrap;width:1%;}
+.dbg-table td{word-break:break-all;}
+.dbg-mono,.dbg-pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;}
+.dbg-pre{background:#fff;border:1px solid rgba(29,158,117,.2);border-radius:6px;padding:.6rem;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow:auto;}
+.dbg-warn{color:var(--coral);font-weight:700;}
+.dbg-ok{color:var(--green);font-weight:700;}
+.dbg-export{width:100%;height:55vh;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;white-space:pre;overflow:auto;border:1px solid rgba(29,158,117,.2);border-radius:6px;padding:.6rem;background:#fff;color:var(--ink);}
 
 .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);
   background:var(--teal);color:#fff;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;
@@ -275,6 +288,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;
     <button class="nav-btn" onclick="showPage('calendario')">Calendario</button>
     <button class="nav-btn" onclick="showPage('sospesi')">Sospesi</button>
     <button class="nav-btn" onclick="showPage('scraping')">⟳ Scraping</button>
+    <button class="nav-btn" onclick="showInfo()" title="Info deploy">ⓘ</button>
   </div>
   <div style="display:flex;align-items:center;gap:.75rem;">
     <div id="nav-user" style="display:none;align-items:center;gap:8px;">
@@ -349,6 +363,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;
       <button class="btn-secondary" id="scrape-stop-btn" onclick="stopPreviewBulk()" style="display:none;">⏹ Ferma</button>
       <button class="btn-primary" id="scrape-all-btn" onclick="startPreviewBulk()">▶ Scraping Tutti</button>
       <button class="btn-primary" onclick="approveAll()" style="background:var(--green);">✓ Approva Tutti</button>
+      <button class="btn-secondary" onclick="showExport()">⇩ Esporta</button>
     </div>
   </div>
   <div style="padding:1rem 2rem;">
@@ -817,6 +832,8 @@ function buildScrapeRow(m, result) {
   let patternHtml;
   if (!isDone) {
     patternHtml = '<span style="color:var(--muted);">—</span>';
+  } else if (!r.ok && r.blocked) {
+    patternHtml = `<span class="pattern-pill none" title="Sito bloccato (${escAttr(r.blocked)}): aggiungi un link alternativo su un altro sito">🛡 Bloccato</span>`;
   } else if (r.patternLabel) {
     const t = r.matched ? r.matched.replace(/&/g, '&amp;').replace(/"/g, '&quot;') : '';
     patternHtml = `<span class="pattern-pill" title="${t}">${r.patternLabel}</span>`;
@@ -831,6 +848,9 @@ function buildScrapeRow(m, result) {
     let hostname = r.url;
     try { hostname = new URL(r.url).hostname.replace(/^www\./, ''); } catch {}
     urlHtml = `<div class="url-cell"><a href="${escAttr(r.url)}" target="_blank" rel="noopener noreferrer">${hostname}</a></div>`;
+  }
+  if (isDone && r.redirects && r.redirects.length) {
+    urlHtml += `<div class="url-cell"><a href="#" style="color:var(--amber);" title="${escAttr(r.redirects.map(x => x.from + ' → ' + x.to).join('\n'))}" onclick="fixRedirects(${m.id});return false;">↪ URL cambiato</a></div>`;
   }
 
   let actionsHtml;
@@ -847,6 +867,8 @@ function buildScrapeRow(m, result) {
       <button class="approve-btn" onclick="approveRow(${m.id})" ${!canApprove ? 'disabled' : ''}>✓ Approva</button>
       <button class="skip-btn" onclick="skipRow(${m.id})" ${!canSkip ? 'disabled' : ''}>✕</button>`;
   }
+
+  actionsHtml = `<button class="debug-btn" title="Debug" onclick="showDebug(${m.id})" ${isDone ? '' : 'disabled'}>🐞</button> ` + actionsHtml;
 
   let rowClass = 'scrape-row';
   if (r && r.approved) rowClass += ' approved';
@@ -983,10 +1005,226 @@ async function approveAll() {
   }
 }
 
+// ── Info deploy & debug scraping ─────────────────────────────────────────────
+
+let infoCache = null;
+async function loadInfo() {
+  infoCache = await apiGet('/api/info');
+  return infoCache;
+}
+
+function kvRows(obj) {
+  return Object.entries(obj).map(([k, v]) => {
+    const val = v == null ? '<span style="color:var(--muted)">—</span>'
+      : typeof v === 'object' ? `<span class="dbg-mono">${escHtml(JSON.stringify(v))}</span>` : escHtml(v);
+    return `<tr><td>${escHtml(k)}</td><td>${val}</td></tr>`;
+  }).join('');
+}
+
+function fmtUptime(sec) {
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  return `${d ? d + 'g ' : ''}${h}h ${m}m`;
+}
+
+async function showInfo() {
+  showModal('<h2>ⓘ Info Deploy</h2><p style="color:var(--muted)">Caricamento…</p>', true);
+  let i;
+  try { i = await loadInfo(); } catch (e) { showModal(`<h2>ⓘ Info Deploy</h2><p class="dbg-warn">Errore: ${escHtml(e.message)}</p>`, true); return; }
+  const g = i.git;
+  const warnings = [];
+  if (!g.commit) warnings.push('Commit git non disponibile (imposta GIT_COMMIT nel deploy)');
+  if (g.dirtyFiles && g.dirtyFiles.length) warnings.push(`Modifiche non committate: ${g.dirtyFiles.length} file`);
+  if (g.currentHeadOnDisk && g.commit && g.currentHeadOnDisk !== g.commit) warnings.push('HEAD su disco diverso dal commit in esecuzione → riavviare il server');
+  if (i.code.changedSinceStart.length) warnings.push(`File modificati dopo l'avvio (serve riavvio): ${i.code.changedSinceStart.join(', ')}`);
+  showModal(`<h2>ⓘ Info Deploy</h2>
+    ${warnings.length ? warnings.map(w => `<div class="dbg-warn">⚠ ${escHtml(w)}</div>`).join('') : '<div class="dbg-ok">✓ Codice in esecuzione allineato al disco</div>'}
+    <div class="dbg-section">Versione</div>
+    <table class="dbg-table">${kvRows({
+      app: `${i.app.name} ${i.app.version}`,
+      commit: g.commit, branch: g.branch, messaggio: g.subject, 'data commit': g.date,
+      'scraper version': i.scraper.version,
+      'file non committati': g.dirtyFiles ? (g.dirtyFiles.join(', ') || 'nessuno') : null
+    })}</table>
+    <div class="dbg-section">Runtime</div>
+    <table class="dbg-table">${kvRows({
+      node: i.runtime.node, piattaforma: i.runtime.platform, os: i.runtime.os, hostname: i.runtime.hostname,
+      pid: i.runtime.pid, avviato: i.runtime.startedAt, uptime: fmtUptime(i.runtime.uptimeSec),
+      'memoria RSS': i.runtime.memoryRssMb + ' MB', 'ora server': i.runtime.serverTime, timezone: i.runtime.timezone, cwd: i.runtime.cwd
+    })}</table>
+    <div class="dbg-section">Ambiente & DB</div>
+    <table class="dbg-table">${kvRows({ ...i.env, 'db size': i.db.sizeBytes != null ? Math.round(i.db.sizeBytes / 1024) + ' KB' : null,
+      serie: `${i.db.total} (attive ${i.db.active}, pausa ${i.db.hiatus}, complete ${i.db.completed})` })}</table>
+    <div class="dbg-section">Dipendenze</div>
+    <table class="dbg-table">${kvRows(i.deps)}</table>
+    <div class="dbg-section">Scraper</div>
+    <table class="dbg-table">${kvRows({ timeout: i.scraper.timeoutMs + ' ms', 'user agent': i.scraper.userAgent, siti: i.scraper.sites.join(', ') })}
+      ${i.scraper.defaultPatterns.map(p => `<tr><td>${escHtml(p.label)}</td><td class="dbg-mono">${escHtml(p.source)}</td></tr>`).join('')}</table>
+    <div class="dbg-section">Hash file (all'avvio)</div>
+    <table class="dbg-table">${Object.entries(i.code.files).map(([f, v]) =>
+      `<tr><td>${escHtml(f)}</td><td class="dbg-mono">${v ? `${v.sha} · ${v.mtime}` : '—'}</td></tr>`).join('')}</table>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="copyText(JSON.stringify(infoCache, null, 2))">Copia JSON</button>
+      <button class="btn-primary" onclick="closeModal()">Chiudi</button>
+    </div>`, true);
+}
+
+function attemptHtml(a, idx) {
+  const an = a.analysis;
+  const status = a.chapter ? `<span class="dbg-ok">✓ Ch.${a.chapter}</span>` : `<span class="dbg-warn">✕ ${escHtml(a.error || 'fallito')}</span>`;
+  let html = `<div class="dbg-section">Tentativo ${idx + 1} — ${status}</div>
+    <table class="dbg-table">${kvRows({
+      url: a.url, 'url richiesto': a.fetchUrl !== a.url ? a.fetchUrl : null, 'url finale': a.redirected ? a.finalUrl : null,
+      'site config': a.siteConfig || 'default', slug: (a.slugs || [a.slug]).filter(Boolean).join(' | '), 'redirect a': a.redirectedTo, metodo: a.method, pattern: a.patternLabel, match: a.matched,
+      'HTTP status': a.status, 'content-type': a.contentType, server: a.server,
+      'html (byte)': a.htmlLength, 'titolo pagina': a.pageTitle, bloccato: a.blocked, tempo: a.elapsedMs != null ? a.elapsedMs + ' ms' : null
+    })}</table>`;
+  if (an) {
+    html += `<table class="dbg-table"><tr><th>Sorgente</th><th>Match</th><th>Top numeri (esempio)</th></tr>
+      <tr><td>href totali / con slug</td><td>${an.hrefCount} / ${an.slugHrefs}</td><td></td></tr>
+      <tr><td>series-link</td><td>${an.seriesLinks.count}</td><td class="dbg-mono">${an.seriesLinks.top.map(t => `${t.n} ← ${escHtml(t.sample)}`).join('<br>')}</td></tr>
+      ${an.patterns.map(p => `<tr><td class="dbg-mono">${escHtml(p.label)}</td><td>${p.count}</td><td class="dbg-mono">${p.top.map(t => `${t.n} ← ${escHtml(t.sample)}`).join('<br>')}</td></tr>`).join('')}
+    </table>`;
+  }
+  if (a.snippet) html += `<div class="dbg-pre">${escHtml(a.snippet)}</div>`;
+  return html;
+}
+
+function showDebug(id) {
+  const m = manhwaData.find(x => x.id === id);
+  const r = previewResults[id];
+  if (!m || !r) return;
+  const attempts = r.attempts || [];
+  showModal(`<h2>🐞 ${escHtml(m.title)}</h2>
+    <table class="dbg-table">${kvRows({
+      id: m.id, 'cap. attuale (DB)': m.last_ch, 'cap. letto': m.read_ch, 'cap. trovato': r.new_ch,
+      delta: r.new_ch != null ? +(r.new_ch - m.last_ch).toFixed(1) : null,
+      esito: r.ok ? 'ok' : (r.error || 'fallito'), 'url usato': r.url,
+      'link configurati': [m.main_link, ...(m.alt_links || [])].filter(Boolean).length
+    })}</table>
+    ${attempts.length ? attempts.map(attemptHtml).join('') : '<p class="dbg-warn">Nessun dato di tentativo (server non aggiornato?)</p>'}
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="copyText(JSON.stringify(debugPayload(${id}), null, 2))">Copia JSON</button>
+      <button class="btn-primary" onclick="closeModal()">Chiudi</button>
+    </div>`, true);
+}
+
+function debugPayload(id) {
+  const m = manhwaData.find(x => x.id === id);
+  const { attempts, ...r } = previewResults[id] || {};
+  return { manhwa: { id: m.id, title: m.title, last_ch: m.last_ch, main_link: m.main_link, alt_links: m.alt_links }, result: r, attempts };
+}
+
+function pad(s, n) { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n - 1) + '…' : s.padEnd(n); }
+
+function buildExportText(info) {
+  const active = manhwaData.filter(m => m.status === 'active');
+  const lines = [];
+  lines.push('# Manhwa Tracker — export scraping');
+  lines.push(`data: ${new Date().toISOString()}`);
+  if (info) {
+    lines.push(`commit: ${info.git.commit || '?'} (${info.git.subject || ''})  dirty: ${info.git.dirtyFiles ? info.git.dirtyFiles.length : '?'}  changedSinceStart: ${info.code.changedSinceStart.join(',') || '-'}`);
+    lines.push(`scraper v${info.scraper.version}  node ${info.runtime.node}  host ${info.runtime.hostname}  avviato ${info.runtime.startedAt}`);
+  }
+  const done = active.filter(m => previewResults[m.id] && previewResults[m.id].status === 'done');
+  const ok = done.filter(m => previewResults[m.id].ok).length;
+  lines.push(`serie attive: ${active.length}  scrapate: ${done.length}  ok: ${ok}  fallite: ${done.length - ok}`);
+  lines.push('');
+  const hdr = `${pad('ID', 4)} ${pad('TITOLO', 30)} ${pad('DB', 6)} ${pad('TROV', 6)} ${pad('Δ', 6)} ${pad('METODO', 11)} ${pad('PATTERN', 14)} ${pad('HTTP', 4)} ${pad('BLOCCO', 12)} ${pad('MS', 6)} ${pad('MATCH', 40)} URL`;
+  lines.push(hdr);
+  lines.push('-'.repeat(hdr.length + 30));
+  for (const m of active) {
+    const r = previewResults[m.id];
+    if (!r || r.status !== 'done') { lines.push(`${pad(m.id, 4)} ${pad(m.title, 30)} ${pad(m.last_ch, 6)} (non scrapato)`); continue; }
+    const att = r.attempts || [];
+    const a = att.find(x => x.chapter) || att[att.length - 1] || {};
+    const delta = r.new_ch != null ? +(r.new_ch - r.old_ch).toFixed(1) : '';
+    const flag = r.new_ch != null && (r.new_ch < r.old_ch || r.new_ch - r.old_ch > 10) ? ' ⚠' : '';
+    lines.push(`${pad(m.id, 4)} ${pad(m.title, 30)} ${pad(r.old_ch, 6)} ${pad(r.new_ch ?? '—', 6)} ${pad(delta + flag, 6)} ${pad(a.method || (r.error || 'fail'), 11)} ${pad(r.patternLabel, 14)} ${pad(a.status, 4)} ${pad(a.blocked, 12)} ${pad(a.elapsedMs, 6)} ${pad(r.matched, 40)} ${a.url || m.main_link}`);
+  }
+  lines.push('');
+  lines.push('## Dettaglio tentativi');
+  for (const m of active) {
+    const r = previewResults[m.id];
+    if (!r || r.status !== 'done') continue;
+    lines.push('');
+    lines.push(`### [${m.id}] ${m.title}  db=${r.old_ch} trovato=${r.new_ch ?? '—'} ${r.ok ? 'OK' : 'FAIL'}`);
+    (r.attempts || []).forEach((a, i) => {
+      lines.push(`  #${i + 1} ${a.url}`);
+      lines.push(`     status=${a.status} final=${a.redirected ? a.finalUrl : '='} redirectedTo=${a.redirectedTo || '-'} site=${a.siteConfig || 'default'} slugs=${(a.slugs || []).join('|')} html=${a.htmlLength} ms=${a.elapsedMs} blocked=${a.blocked || '-'}`);
+      lines.push(`     title="${a.pageTitle || ''}" method=${a.method || '-'} ch=${a.chapter ?? '—'} match=${a.matched || '-'} error=${a.error || '-'}`);
+      const an = a.analysis;
+      if (an) {
+        lines.push(`     href=${an.hrefCount} slugHref=${an.slugHrefs} seriesLinks=${an.seriesLinks.count} top=[${an.seriesLinks.top.map(t => t.n).join(', ')}]`);
+        an.patterns.forEach(p => lines.push(`     pattern ${p.label}: ${p.count} match top=[${p.top.map(t => `${t.n}:"${t.sample}"`).join(', ')}]`));
+      }
+      if (a.snippet) lines.push(`     snippet: ${a.snippet.slice(0, 200)}`);
+    });
+  }
+  const redirected = active.filter(m => previewResults[m.id] && (previewResults[m.id].redirects || []).length);
+  if (redirected.length) {
+    lines.push('');
+    lines.push('## Link da aggiornare (redirect)');
+    for (const m of redirected) {
+      previewResults[m.id].redirects.forEach(x => lines.push(`  [${m.id}] ${m.title}: ${x.from} → ${x.to}`));
+    }
+  }
+  return lines.join('\n');
+}
+
+// Apre l'edit con i link già sostituiti dai nuovi URL; il salvataggio resta esplicito
+function fixRedirects(id) {
+  const m = manhwaData.find(x => x.id === id);
+  const r = previewResults[id];
+  if (!m || !r || !r.redirects) return;
+  openEditModal(id);
+  const altChanged = [];
+  for (const x of r.redirects) {
+    if (x.from === m.main_link) document.getElementById('e-link').value = x.to;
+    else altChanged.push(x);
+  }
+  if (altChanged.length) toast(`Link alternativo cambiato: ${altChanged.map(x => x.to).join(', ')}`);
+}
+
+let exportText = '';
+async function showExport() {
+  let info = null;
+  try { info = await loadInfo(); } catch {}
+  exportText = buildExportText(info);
+  showModal(`<h2>⇩ Export Scraping</h2>
+    <textarea class="dbg-export" readonly>${escHtml(exportText)}</textarea>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="downloadExport()">Scarica .txt</button>
+      <button class="btn-secondary" onclick="copyText(exportText)">Copia</button>
+      <button class="btn-primary" onclick="closeModal()">Chiudi</button>
+    </div>`, true);
+}
+
+function downloadExport() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([exportText], { type: 'text/plain' }));
+  a.download = `scraping-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Copiato');
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+    toast('Copiato');
+  }
+}
+
 // ── Modal & utils ─────────────────────────────────────────────────────────────
 
-function showModal(html) {
-  document.getElementById('modal-content').innerHTML = html;
+function showModal(html, wide) {
+  const mc = document.getElementById('modal-content');
+  mc.classList.toggle('wide', !!wide);
+  mc.innerHTML = html;
   document.getElementById('modal-overlay').classList.add('open');
 }
 function closeModal(e) {
@@ -994,6 +1232,7 @@ function closeModal(e) {
   document.getElementById('modal-overlay').classList.remove('open');
 }
 function escAttr(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function openLink(url) { if (url && url.startsWith('http')) window.open(url, '_blank'); }
 
 let toastTimer;

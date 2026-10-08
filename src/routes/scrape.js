@@ -32,7 +32,10 @@ router.post('/preview', async (req, res) => {
       patternLabel: result.patternLabel,
       matched: result.matched,
       ok: result.ok,
-      error: null
+      error: result.error,
+      blocked: result.blocked,
+      redirects: result.redirects,
+      attempts: result.attempts
     });
   } catch (e) {
     res.json({
@@ -67,7 +70,10 @@ router.get('/preview/bulk', async (req, res) => {
         patternLabel: result.patternLabel,
         matched: result.matched,
         ok: result.ok,
-        error: result.ok ? null : 'not found'
+        error: result.error,
+        blocked: result.blocked,
+        redirects: result.redirects,
+        attempts: result.attempts
       });
     } catch (e) {
       errors++;

@@ -2,6 +2,7 @@
 
 const SITE_CONFIGS = {
   'asurascans.com': {
+    seriesLinksOnly: true,
     patterns: [
       /"chapter_number"\s*:\s*"?(\d+(?:\.\d+)?)"?/gi,
       /chapter[- _\/](\d+(?:\.\d+)?)/gi,
@@ -9,6 +10,7 @@ const SITE_CONFIGS = {
     headers: {}
   },
   'asuracomic.net': {
+    seriesLinksOnly: true,
     patterns: [
       /"chapter_number"\s*:\s*"?(\d+(?:\.\d+)?)"?/gi,
       /chapter[- _\/](\d+(?:\.\d+)?)/gi,
@@ -53,7 +55,7 @@ const SITE_CONFIGS = {
 function getSiteConfig(url) {
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
-    return SITE_CONFIGS[host] || null;
+    return SITE_CONFIGS[host] ? { host, ...SITE_CONFIGS[host] } : null;
   } catch {
     return null;
   }
