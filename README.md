@@ -5,8 +5,9 @@ Personal manhwa/manga tracker with automatic chapter scraping and cover manageme
 ## Features
 
 - Track reading progress across multiple series
-- Automatic chapter detection via web scraping
-- Bulk scrape all series with real-time SSE progress updates
+- Automatic chapter detection via web scraping (site-specific regex patterns per hostname)
+- Scraping approval workflow: preview results (old ch, new ch, URL, matched regex) before saving
+- Bulk preview all active series via SSE — no DB writes until you approve each result
 - Cover images fetched from MangaDex or custom URLs
 - Import existing data from localStorage (`mtracker_v5` format)
 
@@ -48,17 +49,20 @@ DATA_DIR=./data   # stores tracker.db and covers/
 
 ### Scraping
 
-| Method | Path             | Body      | Response                         |
-|--------|------------------|-----------|----------------------------------|
-| POST   | /api/scrape      | `{ url }` | `{ chapter: number \| null }`    |
-| POST   | /api/scrape/bulk | —         | SSE stream                       |
+| Method | Path                     | Body      | Response                              |
+|--------|--------------------------|-----------|---------------------------------------|
+| POST   | /api/scrape              | `{ url }` | `{ chapter: number \| null }`         |
+| POST   | /api/scrape/preview      | `{ id }`  | Single-series preview (no DB write)   |
+| GET    | /api/scrape/preview/bulk | —         | SSE stream preview (no DB writes)     |
 
-Bulk scrape SSE format:
+Preview bulk SSE format:
 ```
-data: {"type":"progress","id":1,"title":"Solo Leveling","chapter":195}
-data: {"type":"progress","id":2,"title":"...","error":"timeout"}
-data: {"type":"done","updated":18,"errors":2}
+data: {"type":"progress","id":1,"title":"Solo Leveling","status":"running"}
+data: {"type":"progress","id":1,"title":"Solo Leveling","old_ch":194,"new_ch":195,"url":"...","patternLabel":"chapter-N","matched":"chapter-195","ok":true}
+data: {"type":"done","total":20,"found":18,"errors":2}
 ```
+
+Chapters are saved only when the user explicitly approves a row via `PUT /api/manhwa/:id`.
 
 ### Covers
 
@@ -81,11 +85,12 @@ manhwa-tracker/
 ├── server.js          # Express entry point
 ├── src/
 │   ├── db.js          # SQLite init, schema, query helpers
-│   ├── scraper.js     # Chapter scraping logic
+│   ├── scraper.js     # Chapter scraping + regex extraction
+│   ├── sites.js       # Per-hostname scraping config (patterns, headers)
 │   ├── covers.js      # MangaDex fetch + disk storage
 │   └── routes/
 │       ├── manhwa.js  # CRUD routes
-│       ├── scrape.js  # Scrape + bulk SSE routes
+│       ├── scrape.js  # Scrape preview routes (single + bulk SSE)
 │       └── covers.js  # Cover routes
 ├── public/
 │   └── index.html     # Frontend SPA
@@ -93,3 +98,16 @@ manhwa-tracker/
     ├── tracker.db
     └── covers/
 ```
+
+## Adding a New Site
+
+Add an entry to `SITE_CONFIGS` in `src/sites.js`:
+
+```js
+'example.com': {
+  patterns: [/chapter[- _](\d+(?:\.\d+)?)/gi],
+  headers: {}
+}
+```
+
+The key is the bare hostname (no `www.`). `patterns` overrides the default 4-pattern set for that site.

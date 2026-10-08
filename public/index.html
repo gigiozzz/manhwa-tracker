@@ -222,25 +222,38 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;
 .link-pill.del{color:var(--coral);border-color:rgba(216,90,48,.2);}
 .link-pill.del:hover{background:rgba(216,90,48,.1);}
 
-/* BULK UPDATE MODAL */
-.bulk-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:5px;
-  margin-bottom:3px;background:rgba(29,158,117,.04);border:1px solid rgba(29,158,117,.1);transition:background .2s;}
-.bulk-row.updated{background:rgba(59,109,17,.08);border-color:rgba(59,109,17,.25);}
-.bulk-row.failed{background:rgba(186,117,23,.08);border-color:rgba(186,117,23,.2);}
+/* SCRAPING PAGE */
+#scraping{background:#dce8f0;padding-bottom:4rem;}
 .bulk-mini-cover{width:28px;height:40px;border-radius:3px;overflow:hidden;flex-shrink:0;background:#c8e8d8;}
 .bulk-mini-cover img{width:100%;height:100%;object-fit:cover;}
 .bulk-title{flex:1;font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.bulk-status{font-size:11px;font-weight:700;flex-shrink:0;min-width:80px;text-align:right;}
-.bulk-status.ok{color:var(--green);}
-.bulk-status.fail{color:var(--amber);}
-.bulk-status.spin{color:var(--teal);}
-.bulk-ch-input{width:66px;background:#fff;border:1px solid rgba(29,158,117,.25);color:var(--ink);
-  font-family:'Cinzel',serif;font-size:13px;padding:4px 8px;border-radius:3px;text-align:center;}
-.bulk-ch-input:focus{outline:none;border-color:var(--teal);}
-.bulk-ch-input.changed{border-color:var(--green);background:rgba(59,109,17,.06);}
 .progress-bar-wrap{height:4px;background:rgba(29,158,117,.15);border-radius:2px;margin:.75rem 0 .5rem;}
 .progress-bar-fill{height:100%;background:var(--teal2);border-radius:2px;transition:width .4s;}
-.bulk-summary{font-size:12px;color:var(--muted);margin-bottom:.75rem;}
+.scrape-table{width:100%;border-collapse:collapse;font-size:13px;}
+.scrape-table th{font-family:'Cinzel',serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal);padding:8px 10px;border-bottom:2px solid rgba(29,158,117,.2);text-align:left;white-space:nowrap;}
+.scrape-table td{padding:8px 10px;border-bottom:1px solid rgba(29,158,117,.1);vertical-align:middle;}
+.scrape-row{transition:background .2s;}
+.scrape-row:hover{background:rgba(29,158,117,.04);}
+.scrape-row.updated{background:rgba(59,109,17,.06);}
+.scrape-row.failed{background:rgba(186,117,23,.06);}
+.scrape-row.approved{background:rgba(29,158,117,.1);opacity:.8;}
+.scrape-row.skipped{opacity:.4;}
+.ch-arrow{color:var(--teal);font-weight:700;}
+.ch-arrow.down{color:var(--coral);}
+.ch-same{color:var(--muted);}
+.pattern-pill{background:rgba(29,158,117,.1);border:1px solid rgba(29,158,117,.2);color:var(--teal);font-size:10px;font-weight:600;letter-spacing:.5px;padding:2px 8px;border-radius:3px;white-space:nowrap;cursor:default;}
+.pattern-pill.none{background:rgba(186,117,23,.1);border-color:rgba(186,117,23,.2);color:var(--amber);}
+.url-cell{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.url-cell a{color:var(--teal2);text-decoration:none;font-size:11px;}
+.url-cell a:hover{text-decoration:underline;}
+.approve-btn{background:rgba(59,109,17,.1);border:1px solid rgba(59,109,17,.3);color:var(--green);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;transition:all .2s;}
+.approve-btn:hover:not(:disabled){background:rgba(59,109,17,.2);}
+.approve-btn:disabled{opacity:.4;cursor:default;}
+.skip-btn{background:transparent;border:1px solid rgba(90,110,122,.25);color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;padding:4px 8px;border-radius:3px;cursor:pointer;transition:all .2s;}
+.skip-btn:hover:not(:disabled){border-color:var(--coral);color:var(--coral);}
+.skip-btn:disabled{opacity:.4;cursor:default;}
+.scrape-spinner{color:var(--teal2);animation:spin .8s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);
   background:var(--teal);color:#fff;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;
@@ -261,9 +274,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;
     <button class="nav-btn" onclick="showPage('reading')">Reading</button>
     <button class="nav-btn" onclick="showPage('calendario')">Calendario</button>
     <button class="nav-btn" onclick="showPage('sospesi')">Sospesi</button>
+    <button class="nav-btn" onclick="showPage('scraping')">⟳ Scraping</button>
   </div>
   <div style="display:flex;align-items:center;gap:.75rem;">
-    <button class="nav-update" onclick="openBulkUpdate()">⟳ Aggiorna Capitoli</button>
     <div id="nav-user" style="display:none;align-items:center;gap:8px;">
       <img id="nav-avatar" src="" alt="" style="width:28px;height:28px;border-radius:50%;border:1px solid rgba(29,158,117,0.5);object-fit:cover;flex-shrink:0;">
       <span id="nav-email" style="font-size:11px;letter-spacing:1px;color:rgba(250,246,237,0.55);display:none;"></span>
@@ -326,6 +339,26 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;
   <div class="sospesi-grid" id="sospesi-grid"></div>
 </div>
 
+<div id="scraping" class="page">
+  <div class="page-header" style="background:linear-gradient(135deg,#dce8f0 0%,#e8f0f8 100%);">
+    <div>
+      <h1>Scraping <span>Preview</span></h1>
+      <p style="color:var(--muted);font-size:13px;margin-top:4px;" id="scraping-subtitle">Seleziona le serie da aggiornare</p>
+    </div>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+      <button class="btn-secondary" id="scrape-stop-btn" onclick="stopPreviewBulk()" style="display:none;">⏹ Ferma</button>
+      <button class="btn-primary" id="scrape-all-btn" onclick="startPreviewBulk()">▶ Scraping Tutti</button>
+      <button class="btn-primary" onclick="approveAll()" style="background:var(--green);">✓ Approva Tutti</button>
+    </div>
+  </div>
+  <div style="padding:1rem 2rem;">
+    <div class="progress-bar-wrap" id="scrape-progress-wrap" style="display:none;">
+      <div class="progress-bar-fill" id="scrape-progress-bar" style="width:0%"></div>
+    </div>
+    <div id="scraping-table-container"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" id="modal-content"></div>
 </div>
@@ -337,8 +370,8 @@ document.documentElement.style.setProperty('--bg-url', `url('${BASE}/bg.jpg')`);
 const DAYS = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
 let manhwaData = [];
 let currentFilter = 'all';
-let bulkResults = {};
-let bulkES = null;
+let previewResults = {};
+let previewES = null;
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 
@@ -417,7 +450,8 @@ function showPage(id) {
     if ((id === 'home' && b.textContent === 'Home') ||
         (id === 'reading' && b.textContent === 'Reading') ||
         (id === 'calendario' && b.textContent === 'Calendario') ||
-        (id === 'sospesi' && b.textContent === 'Sospesi'))
+        (id === 'sospesi' && b.textContent === 'Sospesi') ||
+        (id === 'scraping' && b.textContent === '⟳ Scraping'))
       b.classList.add('active');
   });
   renderPage(id);
@@ -427,6 +461,7 @@ function renderPage(id) {
   if (id === 'reading') renderReading();
   if (id === 'calendario') renderCalendario();
   if (id === 'sospesi') renderSospesi();
+  if (id === 'scraping') renderScraping();
 }
 function renderAll() {
   const a = document.querySelector('.page.active');
@@ -750,144 +785,202 @@ async function deleteManhwa(id) {
   toast('🗑 Rimosso');
 }
 
-// ── Bulk update ───────────────────────────────────────────────────────────────
+// ── Scraping page ─────────────────────────────────────────────────────────────
 
-function openBulkUpdate() {
+function buildScrapeRow(m, result) {
+  const cover = effectiveCover(m);
+  const r = result || null;
+  const isPending = !r || r.status === 'pending';
+  const isRunning = r && r.status === 'running';
+  const isDone = r && r.status === 'done';
+
+  const coverHtml = cover
+    ? `<img src="${cover}" loading="lazy" alt="" onerror="this.style.display='none'">`
+    : '';
+
+  let newChHtml;
+  if (isPending) {
+    newChHtml = '<span style="color:var(--muted);">—</span>';
+  } else if (isRunning) {
+    newChHtml = '<span class="scrape-spinner">⟳</span>';
+  } else if (isDone && r.ok && r.new_ch != null) {
+    const dir = r.new_ch > r.old_ch
+      ? '<span class="ch-arrow">▲</span>'
+      : r.new_ch === r.old_ch
+        ? '<span class="ch-same">=</span>'
+        : '<span class="ch-arrow down">▼</span>';
+    newChHtml = `${dir} <span style="font-family:Cinzel,serif;font-size:12px;">Ch.${r.new_ch}</span>`;
+  } else {
+    newChHtml = '<span style="color:var(--amber);">—</span>';
+  }
+
+  let patternHtml;
+  if (!isDone) {
+    patternHtml = '<span style="color:var(--muted);">—</span>';
+  } else if (r.patternLabel) {
+    const t = r.matched ? r.matched.replace(/&/g, '&amp;').replace(/"/g, '&quot;') : '';
+    patternHtml = `<span class="pattern-pill" title="${t}">${r.patternLabel}</span>`;
+  } else {
+    patternHtml = '<span class="pattern-pill none">nessuno</span>';
+  }
+
+  let urlHtml;
+  if (!isDone || !r.url) {
+    urlHtml = '<span style="color:var(--muted);">—</span>';
+  } else {
+    let hostname = r.url;
+    try { hostname = new URL(r.url).hostname.replace(/^www\./, ''); } catch {}
+    urlHtml = `<div class="url-cell"><a href="${r.url}" target="_blank" rel="noopener noreferrer">${hostname}</a></div>`;
+  }
+
+  let actionsHtml;
+  if (r && r.approved) {
+    actionsHtml = `<button class="card-btn" style="font-size:10px;padding:4px 8px;flex:0 0 auto;" onclick="scrapeRowPreview(${m.id})">↻</button>
+      <span style="color:var(--green);font-size:11px;font-weight:700;letter-spacing:1px;">✓ Approvato</span>`;
+  } else if (r && r.skipped) {
+    actionsHtml = `<button class="card-btn" style="font-size:10px;padding:4px 8px;flex:0 0 auto;" onclick="scrapeRowPreview(${m.id})">↻</button>
+      <span style="color:var(--muted);font-size:11px;">— Saltato</span>`;
+  } else {
+    const canApprove = isDone && r.ok && r.new_ch != null;
+    const canSkip = isDone;
+    actionsHtml = `<button class="card-btn" style="font-size:10px;padding:4px 8px;flex:0 0 auto;" onclick="scrapeRowPreview(${m.id})" ${isRunning ? 'disabled' : ''}>↻</button>
+      <button class="approve-btn" onclick="approveRow(${m.id})" ${!canApprove ? 'disabled' : ''}>✓ Approva</button>
+      <button class="skip-btn" onclick="skipRow(${m.id})" ${!canSkip ? 'disabled' : ''}>✕</button>`;
+  }
+
+  let rowClass = 'scrape-row';
+  if (r && r.approved) rowClass += ' approved';
+  else if (r && r.skipped) rowClass += ' skipped';
+  else if (isDone && r.ok && r.new_ch > r.old_ch) rowClass += ' updated';
+  else if (isDone && !r.ok) rowClass += ' failed';
+
+  return `<tr id="srow-${m.id}" class="${rowClass}">
+    <td><div style="display:flex;align-items:center;gap:8px;min-width:0;"><div class="bulk-mini-cover">${coverHtml}</div><span class="bulk-title">${m.title}</span></div></td>
+    <td><span style="font-family:Cinzel,serif;font-size:12px;color:var(--muted);">Ch.${m.last_ch}</span></td>
+    <td>${newChHtml}</td>
+    <td>${patternHtml}</td>
+    <td>${urlHtml}</td>
+    <td><div style="display:flex;gap:4px;align-items:center;white-space:nowrap;">${actionsHtml}</div></td>
+  </tr>`;
+}
+
+function renderScraping() {
   const active = manhwaData.filter(m => m.status === 'active');
-  bulkResults = {};
-  showModal(buildBulkHTML(active, false, 0));
+  document.getElementById('scraping-subtitle').textContent =
+    `${active.length} serie attive — anteprima senza salvataggio automatico`;
+  const container = document.getElementById('scraping-table-container');
+  if (!active.length) {
+    container.innerHTML = '<p style="color:var(--muted);padding:2rem;">Nessuna serie attiva.</p>';
+    return;
+  }
+  container.innerHTML = `<table class="scrape-table">
+    <thead><tr>
+      <th>Titolo</th><th>Attuale</th><th>Trovato</th><th>Pattern</th><th>URL</th><th>Azioni</th>
+    </tr></thead>
+    <tbody id="scrape-tbody">
+      ${active.map(m => buildScrapeRow(m, previewResults[m.id])).join('')}
+    </tbody>
+  </table>`;
 }
 
-function buildBulkHTML(active, running, done) {
-  const total = active.length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const rows = active.map(m => {
-    const r = bulkResults[m.id];
-    let stHtml = '', rowCls = '', inpCls = '';
-    if (!r) stHtml = `<span class="bulk-status" style="color:var(--muted);">—</span>`;
-    else if (r.loading) stHtml = `<span class="bulk-status spin">⟳</span>`;
-    else if (r.ok && r.ch != null) {
-      const isNew = r.ch > m.last_ch;
-      stHtml = `<span class="bulk-status ok">${isNew ? '▲ ' : '✓ '}Ch.${r.ch}</span>`;
-      rowCls = isNew ? 'updated' : '';
-      inpCls = isNew ? 'changed' : '';
-    } else {
-      stHtml = `<span class="bulk-status fail">—</span>`;
-      rowCls = 'failed';
-    }
-    const cover = effectiveCover(m);
-    const val = (r && r.ok && r.ch) ? r.ch : m.last_ch;
-    return `<div class="bulk-row ${rowCls}" id="brow-${m.id}">
-      <div class="bulk-mini-cover">${cover ? `<img src="${cover}" loading="lazy" alt="">` : ''}</div>
-      <span class="bulk-title">${m.title}</span>
-      <input type="number" class="bulk-ch-input ${inpCls}" id="bch-${m.id}" value="${val}" min="1">
-      ${stHtml}
-    </div>`;
-  }).join('');
-  return `<h2>⟳ Aggiorna Capitoli</h2>
-    <div class="bulk-summary" id="bulk-summary">${running ? `Scansione... ${done}/${total}` : total + ' serie attive — clicca Avvia'}</div>
-    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="bulk-progress" style="width:${pct}%"></div></div>
-    <div style="max-height:52vh;overflow-y:auto;margin-bottom:1rem;">${rows}</div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeBulk()">Chiudi</button>
-      ${running
-        ? `<button class="btn-secondary" onclick="stopBulk()">⏹ Ferma</button>`
-        : `<button class="btn-primary" id="bulk-start-btn" onclick="startBulkScrape()">▶ Avvia Scraping</button>`}
-      <button class="btn-primary" onclick="applyBulkChanges()" style="background:var(--green);">✓ Salva</button>
-    </div>`;
+function stopPreviewBulk() {
+  if (previewES) { previewES.close(); previewES = null; }
 }
 
-function stopBulk() {
-  if (bulkES) { bulkES.close(); bulkES = null; }
-}
-function closeBulk() {
-  stopBulk();
-  closeModal();
-}
-
-function startBulkScrape() {
+function startPreviewBulk() {
   const active = manhwaData.filter(m => m.status === 'active');
-  bulkResults = {};
-  active.forEach(m => bulkResults[m.id] = { loading: true, ok: false, ch: null });
-  document.getElementById('modal-content').innerHTML = buildBulkHTML(active, true, 0);
+  previewResults = {};
+  active.forEach(m => { previewResults[m.id] = { status: 'pending' }; });
+  document.getElementById('scrape-progress-wrap').style.display = 'block';
+  document.getElementById('scrape-progress-bar').style.width = '0%';
+  document.getElementById('scrape-all-btn').style.display = 'none';
+  document.getElementById('scrape-stop-btn').style.display = 'inline-block';
+  renderScraping();
+
   let done = 0;
+  stopPreviewBulk();
+  previewES = new EventSource(BASE + '/api/scrape/preview/bulk');
 
-  stopBulk();
-  bulkES = new EventSource(BASE + '/api/scrape/bulk');
-
-  bulkES.onmessage = e => {
+  previewES.onmessage = e => {
     const data = JSON.parse(e.data);
     if (data.type === 'progress') {
       if (data.status === 'running') {
-        bulkResults[data.id] = { loading: true, ok: false, ch: null };
-        const row = document.getElementById(`brow-${data.id}`);
-        if (row) row.querySelector('[class*="bulk-status"]').outerHTML = `<span class="bulk-status spin">⟳</span>`;
+        previewResults[data.id] = { status: 'running' };
       } else {
         done++;
-        const m = manhwaData.find(x => x.id === data.id);
-        if (data.error) {
-          bulkResults[data.id] = { loading: false, ok: false, ch: null };
-        } else {
-          bulkResults[data.id] = { loading: false, ok: true, ch: data.chapter };
-          if (m && data.chapter > m.last_ch) m.last_ch = data.chapter;
-        }
-        const row = document.getElementById(`brow-${data.id}`);
-        if (row) {
-          const r = bulkResults[data.id];
-          if (r.ok && r.ch != null) {
-            const isNew = data.updated;
-            row.className = `bulk-row ${isNew ? 'updated' : ''}`;
-            const inp = document.getElementById(`bch-${data.id}`);
-            if (inp) { inp.value = r.ch; if (isNew) inp.classList.add('changed'); }
-            row.querySelector('[class*="bulk-status"]').outerHTML = `<span class="bulk-status ok">${isNew ? '▲ ' : '✓ '}Ch.${r.ch}</span>`;
-          } else {
-            row.className = 'bulk-row failed';
-            row.querySelector('[class*="bulk-status"]').outerHTML = `<span class="bulk-status fail">—</span>`;
-          }
-        }
-        const prog = document.getElementById('bulk-progress');
-        if (prog) prog.style.width = Math.round((done / active.length) * 100) + '%';
-        const summ = document.getElementById('bulk-summary');
-        if (summ) summ.textContent = `Scansione... ${done}/${active.length}`;
+        previewResults[data.id] = { ...data, status: 'done' };
+        const pct = Math.round((done / active.length) * 100);
+        document.getElementById('scrape-progress-bar').style.width = pct + '%';
+      }
+      const m = manhwaData.find(x => x.id === data.id);
+      if (m) {
+        const existingRow = document.getElementById(`srow-${data.id}`);
+        if (existingRow) existingRow.outerHTML = buildScrapeRow(m, previewResults[data.id]);
       }
     }
     if (data.type === 'done') {
-      bulkES.close(); bulkES = null;
-      const summ = document.getElementById('bulk-summary');
-      if (summ) summ.textContent = `Completato — ${data.updated} aggiornati, ${data.errors} errori`;
-      const btn = document.getElementById('bulk-start-btn');
-      if (btn) btn.textContent = '⟳ Riesegui';
-      // Refresh full list from server
-      apiGet('/api/manhwa').then(d => { manhwaData = d; }).catch(() => {});
+      stopPreviewBulk();
+      document.getElementById('scrape-all-btn').style.display = 'inline-block';
+      document.getElementById('scrape-stop-btn').style.display = 'none';
+      document.getElementById('scraping-subtitle').textContent =
+        `Completato — ${data.found} trovati, ${data.errors} errori — approva per salvare`;
     }
   };
 
-  bulkES.onerror = () => {
-    if (bulkES) { bulkES.close(); bulkES = null; }
-    const summ = document.getElementById('bulk-summary');
-    if (summ) summ.textContent = 'Connessione interrotta';
+  previewES.onerror = () => {
+    stopPreviewBulk();
+    document.getElementById('scrape-all-btn').style.display = 'inline-block';
+    document.getElementById('scrape-stop-btn').style.display = 'none';
   };
 }
 
-async function applyBulkChanges() {
-  const active = manhwaData.filter(m => m.status === 'active');
-  let changed = 0;
-  const promises = [];
-  active.forEach(m => {
-    const inp = document.getElementById(`bch-${m.id}`);
-    if (inp) {
-      const val = parseInt(inp.value);
-      if (val && val > 0 && val !== m.last_ch) {
-        m.last_ch = val;
-        changed++;
-        promises.push(apiPut(m.id, { last_ch: val }).catch(() => {}));
-      }
-    }
-  });
-  await Promise.all(promises);
-  closeModal();
-  renderAll();
-  toast(changed > 0 ? `✓ ${changed} serie aggiornate!` : 'Nessuna modifica');
+async function scrapeRowPreview(id) {
+  const m = manhwaData.find(x => x.id === id);
+  if (!m) return;
+  previewResults[id] = { status: 'running' };
+  const existingRow = document.getElementById(`srow-${id}`);
+  if (existingRow) existingRow.outerHTML = buildScrapeRow(m, previewResults[id]);
+  try {
+    const result = await apiPost('/api/scrape/preview', { id });
+    previewResults[id] = { ...result, status: 'done' };
+  } catch (e) {
+    previewResults[id] = { id, ok: false, new_ch: null, error: e.message, status: 'done' };
+  }
+  const row = document.getElementById(`srow-${id}`);
+  if (row) row.outerHTML = buildScrapeRow(m, previewResults[id]);
+}
+
+async function approveRow(id) {
+  const result = previewResults[id];
+  if (!result || !result.ok || result.new_ch == null) return;
+  try {
+    const updated = await apiPut(id, { last_ch: result.new_ch });
+    const idx = manhwaData.findIndex(x => x.id === id);
+    if (idx !== -1) manhwaData[idx] = updated;
+    previewResults[id] = { ...result, approved: true };
+    const m = manhwaData.find(x => x.id === id);
+    const row = document.getElementById(`srow-${id}`);
+    if (row && m) row.outerHTML = buildScrapeRow(m, previewResults[id]);
+    toast(`✓ Ch.${result.new_ch} — ${m ? m.title.split(' ').slice(0, 3).join(' ') : ''}`);
+  } catch { toast('Errore durante il salvataggio'); }
+}
+
+function skipRow(id) {
+  if (!previewResults[id]) previewResults[id] = {};
+  previewResults[id] = { ...previewResults[id], skipped: true };
+  const m = manhwaData.find(x => x.id === id);
+  const row = document.getElementById(`srow-${id}`);
+  if (row && m) row.outerHTML = buildScrapeRow(m, previewResults[id]);
+}
+
+async function approveAll() {
+  const toApprove = Object.entries(previewResults)
+    .filter(([, r]) => r.ok && r.new_ch != null && !r.approved && !r.skipped)
+    .map(([id]) => parseInt(id));
+  if (!toApprove.length) { toast('Nessun risultato da approvare'); return; }
+  for (const id of toApprove) {
+    await approveRow(id).catch(() => {});
+  }
 }
 
 // ── Modal & utils ─────────────────────────────────────────────────────────────
@@ -898,7 +991,6 @@ function showModal(html) {
 }
 function closeModal(e) {
   if (e && e.target !== document.getElementById('modal-overlay')) return;
-  stopBulk();
   document.getElementById('modal-overlay').classList.remove('open');
 }
 function openLink(url) { if (url && url.startsWith('http')) window.open(url, '_blank'); }
