@@ -3,8 +3,8 @@ const fetch = require('node-fetch');
 const { getSiteConfig } = require('./sites');
 
 const CH_PATTERNS = [
-  /chapter[- _](\d+(?:\.\d+)?)/gi,
-  /chap[- _]?(\d+(?:\.\d+)?)/gi,
+  /chapter[- _\/](\d+(?:\.\d+)?)/gi,
+  /chap[- _\/]?(\d+(?:\.\d+)?)/gi,
   /"chapter_number"\s*:\s*"?(\d+(?:\.\d+)?)"?/gi,
   /ch\.?\s*(\d+(?:\.\d+)?)/gi
 ];
@@ -39,6 +39,48 @@ function extractMaxChapter(html, patterns) {
     : { ch: null, patternIndex: null, matched: null };
 }
 
+function safeDecode(s) {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
+
+// Ultimo segmento non vuoto del path, es. /comics/foo-bar/ -> "foo-bar"
+function seriesSlug(url) {
+  try {
+    const segs = new URL(url).pathname.split('/').filter(Boolean);
+    return segs.length ? safeDecode(segs[segs.length - 1]).toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Considera solo i link che appartengono alla serie (evita sidebar/widget di altre serie)
+function extractFromSeriesLinks(html, slug) {
+  if (!slug || slug.length < 3) return { ch: null, matched: null };
+  const hrefRe = /href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+  const chRe = /(?:chapter|chap|ch)[-_ \/.]?(\d+(?:\.\d+)?)/i;
+  let max = 0;
+  let bestMatched = null;
+  let m;
+  while ((m = hrefRe.exec(html)) !== null) {
+    const raw = (m[1] || m[2] || '').replace(/&#0?39;|&apos;/g, "'").replace(/&amp;/g, '&');
+    const href = safeDecode(raw).toLowerCase();
+    const idx = href.indexOf(slug);
+    if (idx === -1) continue;
+    const c = chRe.exec(href.slice(idx + slug.length));
+    if (!c) continue;
+    const n = parseFloat(c[1]);
+    if (n > max && n < 9999) {
+      max = n;
+      bestMatched = raw;
+    }
+  }
+  return max > 0 ? { ch: Math.floor(max), matched: bestMatched } : { ch: null, matched: null };
+}
+
+function normalizeUrl(url) {
+  try { return new URL(url).href.replace(/'/g, '%27'); } catch { return url; }
+}
+
 async function scrapeUrl(url, siteConfig) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12000);
@@ -48,10 +90,12 @@ async function scrapeUrl(url, siteConfig) {
       siteConfig && siteConfig.headers ? siteConfig.headers : {}
     );
     const patterns = (siteConfig && siteConfig.patterns) ? siteConfig.patterns : CH_PATTERNS;
-    const resp = await fetch(url, { signal: controller.signal, headers });
+    const resp = await fetch(normalizeUrl(url), { signal: controller.signal, headers });
     if (!resp.ok) return { chapter: null, patternLabel: null, matched: null };
     const html = await resp.text();
     if (typeof html !== 'string' || html.length < 200) return { chapter: null, patternLabel: null, matched: null };
+    const scoped = extractFromSeriesLinks(html, seriesSlug(url));
+    if (scoped.ch) return { chapter: scoped.ch, patternLabel: 'series-link', matched: scoped.matched };
     const { ch, patternIndex, matched } = extractMaxChapter(html, patterns);
     let patternLabel = null;
     if (patternIndex != null) {
@@ -82,4 +126,4 @@ async function scrapeChapter(manhwa) {
   return { ch: null, url: null, patternLabel: null, matched: null, ok: false };
 }
 
-module.exports = { scrapeUrl, scrapeChapter, extractMaxChapter, CH_PATTERNS, PATTERN_LABELS };
+module.exports = { scrapeUrl, scrapeChapter, extractMaxChapter, extractFromSeriesLinks, seriesSlug, CH_PATTERNS, PATTERN_LABELS };

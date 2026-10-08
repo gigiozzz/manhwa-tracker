@@ -502,7 +502,7 @@ function renderHome() {
   document.getElementById('recent-scroll').innerHTML = sorted.map(m => {
     const u = m.last_ch - m.read_ch;
     const cover = effectiveCover(m);
-    return `<div class="recent-item" onclick="openLink('${m.main_link}')">
+    return `<div class="recent-item" data-url="${escAttr(m.main_link)}" onclick="openLink(this.dataset.url)">
       <div class="recent-cover">${cover
         ? `<img src="${cover}" alt="" loading="lazy" onerror="this.style.display='none'">`
         : `<div class="no-cover-mini">${emoji(m)}</div>`}${u > 0 ? `<div class="new-badge">+${u}</div>` : ''}</div>
@@ -531,7 +531,7 @@ function renderReading() {
     const pct = m.last_ch > 0 ? Math.round((m.read_ch / m.last_ch) * 100) : 100;
     const cover = effectiveCover(m);
     return `<div class="manhwa-card ${m.status === 'hiatus' ? 'hiatus' : ''}" id="card-${m.id}">
-      <div class="card-cover" onclick="openLink('${m.main_link}')" title="Apri sito">
+      <div class="card-cover" data-url="${escAttr(m.main_link)}" onclick="openLink(this.dataset.url)" title="Apri sito">
         ${cover
           ? `<img src="${cover}" alt="${m.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
           : ''}
@@ -576,7 +576,7 @@ function renderCalendario() {
       <div class="cal-day-name">${day}</div>
       ${(dm[day] || []).map(m => {
         const cover = effectiveCover(m);
-        return `<div class="cal-card" onclick="openLink('${m.main_link}')">
+        return `<div class="cal-card" data-url="${escAttr(m.main_link)}" onclick="openLink(this.dataset.url)">
           <div class="cal-mini-cover">${cover ? `<img src="${cover}" loading="lazy" alt="">` : ''}</div>
           <div><div class="cal-card-title">${m.title.split(' ').slice(0, 4).join(' ')}</div><div class="cal-card-ch">Ch.${m.last_ch}</div></div>
         </div>`;
@@ -588,7 +588,7 @@ function renderCalendario() {
     extra.innerHTML = `<div style="font-family:Cinzel,serif;font-size:10px;letter-spacing:2px;color:var(--teal);text-transform:uppercase;margin-bottom:.5rem;">Settimanale / Variabile</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">${variabile.map(m => {
         const cover = effectiveCover(m);
-        return `<div class="cal-card" style="flex:0 0 auto;width:140px;" onclick="openLink('${m.main_link}')">
+        return `<div class="cal-card" style="flex:0 0 auto;width:140px;" data-url="${escAttr(m.main_link)}" onclick="openLink(this.dataset.url)">
           <div class="cal-mini-cover">${cover ? `<img src="${cover}" loading="lazy" alt="">` : ''}</div>
           <div><div class="cal-card-title">${m.title.split(' ').slice(0, 3).join(' ')}</div><div class="cal-card-ch">Ch.${m.last_ch}</div></div>
         </div>`;
@@ -609,7 +609,7 @@ function renderSospesi() {
   grid.innerHTML = list.map(m => {
     const cover = effectiveCover(m);
     return `<div class="sospesi-card">
-      <div class="sospesi-cover" onclick="openLink('${m.main_link}')">${cover ? `<img src="${cover}" loading="lazy" alt="">` : emoji(m)}</div>
+      <div class="sospesi-cover" data-url="${escAttr(m.main_link)}" onclick="openLink(this.dataset.url)">${cover ? `<img src="${cover}" loading="lazy" alt="">` : emoji(m)}</div>
       <div style="flex:1;min-width:0;">
         <div class="sospesi-title">${m.title}</div>
         <div class="sospesi-meta">Ultimo: Ch.${m.last_ch} · Letto: Ch.${m.read_ch}</div>
@@ -705,12 +705,12 @@ function openEditModal(id) {
     <div class="modal-field"><label>Ultimo Cap. Uscito</label><input id="e-lastch" type="number" value="${m.last_ch}"/></div>
     <div class="modal-field"><label>Letto fino a${unread > 0 ? ` — <span style="color:var(--coral)">+${unread} da leggere!</span>` : ''}</label><input id="e-readch" type="number" value="${m.read_ch}" min="0"/></div>
     <div class="modal-field"><label>Giorno Uscita</label><select id="e-day">${['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica','Lun/Mar','Gio/Ven','Settimanale','Variabile'].map(d => `<option${d === m.release_day ? ' selected' : ''}>${d}</option>`).join('')}</select></div>
-    <div class="modal-field"><label>Link Principale</label><input id="e-link" value="${m.main_link}"/></div>
+    <div class="modal-field"><label>Link Principale</label><input id="e-link" value="${escAttr(m.main_link)}"/></div>
     <div class="modal-field"><label>Link Alternativi</label><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
       ${m.alt_links.map((l, i) => {
         let host = '';
         try { host = new URL(l.startsWith('http') ? l : 'https://' + l).hostname.replace('www.', ''); } catch { host = l; }
-        return `<span class="link-pill" onclick="openLink('${l}')">${host}</span><span class="link-pill del" onclick="removeLink(${id},${i})">✕</span>`;
+        return `<span class="link-pill" data-url="${escAttr(l)}" onclick="openLink(this.dataset.url)">${host}</span><span class="link-pill del" onclick="removeLink(${id},${i})">✕</span>`;
       }).join('')}
       <input id="e-newlink" placeholder="+ nuovo link" style="border:none;background:transparent;color:var(--ink);font-size:13px;min-width:120px;padding:3px 8px;outline:none;" onkeydown="if(event.key==='Enter')addLink(${id})">
     </div></div>
@@ -830,7 +830,7 @@ function buildScrapeRow(m, result) {
   } else {
     let hostname = r.url;
     try { hostname = new URL(r.url).hostname.replace(/^www\./, ''); } catch {}
-    urlHtml = `<div class="url-cell"><a href="${r.url}" target="_blank" rel="noopener noreferrer">${hostname}</a></div>`;
+    urlHtml = `<div class="url-cell"><a href="${escAttr(r.url)}" target="_blank" rel="noopener noreferrer">${hostname}</a></div>`;
   }
 
   let actionsHtml;
@@ -993,6 +993,7 @@ function closeModal(e) {
   if (e && e.target !== document.getElementById('modal-overlay')) return;
   document.getElementById('modal-overlay').classList.remove('open');
 }
+function escAttr(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function openLink(url) { if (url && url.startsWith('http')) window.open(url, '_blank'); }
 
 let toastTimer;
